@@ -1,0 +1,134 @@
+{
+  "1": {
+    "fact_end": "",
+    "fact_start": "",
+    "floors": [
+      {
+        "completedWorks": [
+          {
+            "name": "пп",
+            "plannedWorkId": 1784634069171.9849,
+            "quantity": 20000,
+            "unit": "м³"
+          },
+          {
+            "name": "арматура",
+            "plannedWorkId": 1784634674988.6582,
+            "quantity": 15000,
+            "unit": "м³"
+          }
+        ],
+        "description": "",
+        "fact_end": "",
+        "fact_start": "",
+        "name": "подвал",
+        "plan_end": "",
+        "plan_start": "",
+        "plannedWorks": [
+          {
+            "id": 1784634069171.9849,
+            "name": "пп",
+            "quantity": 20000,
+            "unit": "м³"
+          },
+          {
+            "id": 1784634674988.6582,
+            "name": "арматура",
+            "quantity": 20000,
+            "unit": "м³"
+          }
+        ],
+        "shifts": [
+          {
+            "date": "2026-07-21",
+            "name": "п",
+            "workers": 1500
+          },
+          {
+            "date": "2026-07-22",
+            "name": "р",
+            "workers": 2000
+          }
+        ],
+        "status": "completed"
+      }
+    ],
+    "name": "Бастион №1",
+    "plan_end": "",
+    "plan_start": "",
+    "workers": 150
+  },
+  "2": {
+    "fact_end": "",
+    "fact_start": "",
+    "floors": [],
+    "name": "Бастион №2",
+    "plan_end": "",
+    "plan_start": "",
+    "workers": 0
+  },
+  "3": {
+    "fact_end": "",
+    "fact_start": "",
+    "floors": [],
+    "name": "Бастион №3",
+    "plan_end": "",
+    "plan_start": "",
+    "position": {
+      "rotation": 125,
+      "x": 72.03192416848191,
+      "y": 48.69090779622396
+    },
+    "workers": 0
+  },
+  "4": {
+    "fact_end": "",
+    "fact_start": "",
+    "floors": [],
+    "name": "Бастион №4",
+    "plan_end": "",
+    "plan_start": "",
+    "workers": 0
+  },
+  "5": {
+    "fact_end": "",
+    "fact_start": "",
+    "floors": [],
+    "name": "Бастион №5",
+    "plan_end": "",
+    "plan_start": "",
+    "workers": 0
+  },
+  "6": {
+    "fact_end": "",
+    "fact_start": "",
+    "floors": [],
+    "name": "Бастион №6",
+    "plan_end": "",
+    "plan_start": "",
+    "position": {
+      "rotation": 0,
+      "x": 51.11260053619303,
+      "y": 79.16666666666666
+    },
+    "workers": 200
+  },
+  "7": {
+    "fact_end": "",
+    "fact_start": "",
+    "floors": [],
+    "name": "Бастион №7",
+    "plan_end": "",
+    "plan_start": "",
+    "workers": 0
+  },
+  "8": {
+    "fact_end": "",
+    "fact_start": "",
+    "floors": [],
+    "name": "Бастион №8",
+    "plan_end": "",
+    "plan_start": "",
+    "workers": 0
+  }
+}

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Суворовские бастионы</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div id="header">
+        <span>🏗️ Суворовские бастионы</span>
+        <div>
+            <button id="uploadBtn" class="action-btn">📷 Загрузить фото</button>
+            <input type="file" id="fileInput" accept="image/*" style="display:none">
+            <button id="drawRoadBtn" class="action-btn">🛣️ Рисовать дорогу</button>
+            <button id="clearRoadBtn" class="action-btn" style="background:#e74c3c;">🗑️ Очистить дорогу</button>
+            <button id="resetHousesBtn" class="action-btn" style="background:#8e44ad;">🔄 Сбросить дома</button>
+            <button id="freezeBtn" class="action-btn" style="background:#f1c40f;color:#2c3e50;">🔒 Заморозить</button>
+            <small>Кликните по дому → ввод данных</small>
+        </div>
+    </div>
+
+    <div id="workspace">
+        <div id="scene">
+            <svg id="roadSvg" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;"></svg>
+            <div id="housesContainer" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;pointer-events:none;"></div>
+            <div id="emptyHint" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:white;font-size:28px;text-shadow:0 2px 10px rgba(0,0,0,0.7);z-index:0;pointer-events:none;text-align:center;">Загрузите фото и нарисуйте дорогу</div>
+            <div id="drawingHint" style="display:none;position:absolute;top:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:white;padding:8px 20px;border-radius:20px;font-size:16px;z-index:10;pointer-events:none;">Кликните на карте: добавляйте точки дороги. Двойной клик — завершить.</div>
+        </div>
+    </div>
+
+    <div id="panel">
+        <button class="close-btn" id="closePanel">&times;</button>
+        <h2>Дом #<span id="houseIdDisplay"></span></h2>
+        <div id="houseDetails">
+            <label>Название дома:</label>
+            <input type="text" id="houseNameInput" placeholder="Например: Бастион №1">
+            <div class="dates-row" style="margin-top:8px;">
+                <div class="date-group">
+                    <label>📅 План начала</label>
+                    <input type="date" id="housePlanStart">
+                </div>
+                <div class="date-group">
+                    <label>📅 План окончания</label>
+                    <input type="date" id="housePlanEnd">
+                </div>
+            </div>
+            <div class="dates-row">
+                <div class="date-group">
+                    <label>📅 Факт начала</label>
+                    <input type="date" id="houseFactStart">
+                </div>
+                <div class="date-group">
+                    <label>📅 Факт окончания</label>
+                    <input type="date" id="houseFactEnd">
+                </div>
+            </div>
+        </div>
+        <hr style="margin: 12px 0;">
+        <div id="floorsContainer"></div>
+        <button class="add-btn" id="addFloorBtn">+ Добавить этап</button>
+        <button class="save-btn" id="saveDataBtn">💾 Сохранить</button>
+    </div>
+
+    <div id="infoSection">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap;">
+            <h2 style="margin:0;">📊 Сводка по строительству</h2>
+            <div>
+                <a href="/api/excel" download class="action-btn" style="background: #27ae60; text-decoration: none; color: white; display: inline-block;">📊 Скачать Excel</a>
+            </div>
+        </div>
+        <div id="chartContainer">
+            <canvas id="progressChart"></canvas>
+        </div>
+
+        <div id="tableContainer">
+            <h3>📋 Детальная информация по объектам</h3>
+            <div id="housesTableWrapper">
+                <table id="housesTable">
+                    <thead>
+                        <tr>
+                            <th>Дом</th>
+                            <th>Название</th>
+                            <th>План</th>
+                            <th>Факт</th>
+                            <th>Смен (всего)</th>
+                            <th>Человек (всего)</th>
+                            <th>Этапов</th>
+                            <th>Этапы</th>
+                            <th>Выполнение</th>
+                            <th>Планируемые работы</th>
+                            <th>Выполненные работы (прогресс)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- заполняется JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

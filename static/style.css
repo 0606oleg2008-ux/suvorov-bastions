@@ -1,0 +1,694 @@
+/* ========== ОБЩИЕ СТИЛИ ========== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background: #f0f2f5;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    overflow-y: auto;
+}
+
+/* ========== ПЛАВНЫЕ АНИМАЦИИ ========== */
+@keyframes fadeInUp {
+    0% { opacity: 0; transform: translateY(40px) scale(0.95); filter: blur(4px); }
+    60% { opacity: 1; transform: translateY(-4px) scale(1.01); filter: blur(0); }
+    100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+@keyframes slideInRight {
+    0% { transform: translateX(80px); opacity: 0; filter: blur(6px); }
+    60% { transform: translateX(-8px); opacity: 1; filter: blur(0); }
+    100% { transform: translateX(0); opacity: 1; filter: blur(0); }
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.5); transform: scale(1); }
+    50% { transform: scale(1.04); box-shadow: 0 0 0 18px rgba(231, 76, 60, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); transform: scale(1); }
+}
+
+@keyframes fadeInScale {
+    0% { opacity: 0; transform: scale(0.7) rotate(-2deg); filter: blur(2px); }
+    60% { opacity: 1; transform: scale(1.03) rotate(0.5deg); filter: blur(0); }
+    100% { opacity: 1; transform: scale(1) rotate(0); filter: blur(0); }
+}
+
+/* Применение анимаций к основным блокам */
+#header { animation: fadeInUp 1s cubic-bezier(0.22, 1, 0.36, 1) both; }
+#workspace { animation: fadeInUp 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both; }
+#infoSection { animation: fadeInUp 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both; }
+
+/* ========== ЗАГОЛОВОК ========== */
+#header {
+    background: #2c3e50;
+    color: white;
+    padding: 12px 20px;
+    font-size: 24px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+}
+#header small {
+    font-size: 14px;
+    font-weight: normal;
+    opacity: 0.8;
+    margin-left: 16px;
+}
+
+/* ========== КНОПКИ ========== */
+.action-btn {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    border: none;
+    border-radius: 30px;
+    padding: 8px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-right: 8px;
+    text-decoration: none;
+    box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+                background 0.4s ease;
+    display: inline-block;
+}
+.action-btn:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 10px 30px rgba(52, 152, 219, 0.5);
+}
+.action-btn:active { transform: scale(0.95); }
+#drawRoadBtn {
+    background: linear-gradient(135deg, #e67e22, #d35400);
+    box-shadow: 0 4px 10px rgba(230, 126, 34, 0.3);
+}
+#drawRoadBtn:hover { box-shadow: 0 10px 30px rgba(230, 126, 34, 0.5); }
+#clearRoadBtn {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+}
+#clearRoadBtn:hover { box-shadow: 0 10px 30px rgba(231, 76, 60, 0.5); }
+#resetHousesBtn {
+    background: linear-gradient(135deg, #8e44ad, #732d91);
+    box-shadow: 0 4px 10px rgba(142, 68, 173, 0.3);
+}
+#resetHousesBtn:hover { box-shadow: 0 10px 30px rgba(142, 68, 173, 0.5); }
+#freezeBtn {
+    background: linear-gradient(135deg, #f1c40f, #f39c12);
+    color: #2c3e50;
+    box-shadow: 0 4px 10px rgba(241, 196, 15, 0.3);
+}
+#freezeBtn:hover { box-shadow: 0 10px 30px rgba(241, 196, 15, 0.5); }
+
+/* ========== РАБОЧАЯ ОБЛАСТЬ ========== */
+#workspace {
+    padding: 20px;
+    background: #e9ecef;
+    flex: 1;
+    position: relative;
+}
+#scene {
+    width: 100%;
+    height: 600px;
+    background: #2c3e50;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    cursor: default;
+}
+#emptyHint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 28px;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+    z-index: 0;
+    pointer-events: none;
+    text-align: center;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+}
+#drawingHint {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 16px;
+    z-index: 10;
+    pointer-events: none;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+/* ========== ДОМА (МЕДЛЕННЫЙ ПЛАВНЫЙ ПОВОРОТ ПРИ НАВЕДЕНИИ) ========== */
+.house-marker {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    background: #e67e22;
+    border: 3px solid #2c3e50;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 0 0 2px rgba(255, 255, 255, 0.3);
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+    transform-origin: center center;
+    user-select: none;
+    pointer-events: auto;
+    z-index: 5;
+    transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+                transform 0.9s cubic-bezier(0.34, 1.56, 0.64, 1),
+                background 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+                border-color 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.house-marker:hover {
+    transform: scale(1.08) rotate(5deg);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    animation: pulse 2s ease-in-out infinite;
+}
+.house-marker.dragging {
+    cursor: grabbing;
+    transform: scale(1.1) !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+}
+.house-marker .marker-label {
+    pointer-events: none;
+}
+
+/* ========== ПАНЕЛЬ ========== */
+#panel {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 580px;
+    max-height: calc(100% - 40px);
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    overflow-y: auto;
+    display: none;
+    z-index: 2000;
+}
+#panel.active {
+    display: block;
+    animation: slideInRight 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+#panel h2 {
+    margin-top: 0;
+    color: #2c3e50;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+}
+#panel .close-btn {
+    float: right;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #888;
+}
+#panel .close-btn:hover { color: #c0392b; }
+#panel label {
+    font-weight: 600;
+    display: block;
+    margin-top: 8px;
+}
+#panel input,
+#panel textarea,
+#panel select {
+    width: 100%;
+    padding: 8px 10px;
+    margin-top: 4px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+}
+#panel textarea { resize: vertical; min-height: 40px; }
+.dates-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 4px;
+}
+.dates-row .date-group {
+    flex: 1;
+    min-width: 100px;
+}
+.dates-row .date-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 2px;
+}
+.dates-row .date-group input {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+}
+#houseDetails input { margin-bottom: 4px; }
+
+/* ========== БЛОК ЭТАПА ========== */
+.floor-block {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 12px;
+    border-left: 4px solid #3498db;
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.floor-block:hover {
+    transform: translateX(6px) scale(1.01);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+.floor-block .floor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.floor-block .floor-header h4 { margin: 0; }
+.floor-block .floor-header .shifts-summary {
+    font-size: 12px;
+    color: #555;
+    margin-left: 12px;
+}
+.floor-block .remove-floor {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 2px 10px;
+    cursor: pointer;
+}
+
+/* ========== СМЕНЫ ========== */
+.shift-group {
+    margin-top: 8px;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 8px;
+    background: #fff;
+    animation: fadeInScale 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.shift-group .group-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #2c3e50;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.shift-group .group-title .badge {
+    font-size: 12px;
+    padding: 2px 10px;
+    border-radius: 12px;
+    color: white;
+    background: #8e44ad;
+}
+.shift-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    border-bottom: 1px solid #f1f3f5;
+}
+.shift-item .shift-name { font-weight: 500; min-width: 80px; }
+.shift-item .shift-details { color: #555; font-size: 13px; }
+.shift-item .remove-shift {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 2px 8px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-left: auto;
+}
+.shift-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+.shift-form input,
+.shift-form select {
+    flex: 1;
+    min-width: 60px;
+    padding: 4px 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+}
+.shift-form .sf-name { flex: 1.5; min-width: 80px; }
+.shift-form .sf-date { flex: 1; min-width: 100px; }
+.shift-form .sf-workers { flex: 0.8; min-width: 60px; }
+.shift-form .sf-btn {
+    background: #8e44ad;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 12px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.shift-form .sf-btn:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 6px 16px rgba(142, 68, 173, 0.3);
+}
+
+/* ========== РАБОТЫ ========== */
+.work-group {
+    margin-top: 8px;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 8px;
+    background: #fff;
+    animation: fadeInScale 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.work-group .group-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #2c3e50;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.work-group .group-title .badge {
+    font-size: 12px;
+    padding: 2px 10px;
+    border-radius: 12px;
+    color: white;
+}
+.badge-planned { background: #3498db; }
+.badge-completed { background: #27ae60; }
+
+.work-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    border-bottom: 1px solid #f1f3f5;
+}
+.work-item .work-name { font-weight: 500; min-width: 100px; }
+.work-item .work-details { color: #555; font-size: 13px; }
+.work-item .remove-work {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 2px 8px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-left: auto;
+}
+.work-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+.work-form input,
+.work-form select {
+    flex: 1;
+    min-width: 60px;
+    padding: 4px 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+}
+.work-form .wf-name { flex: 2; min-width: 100px; }
+.work-form .wf-qty { flex: 0.8; min-width: 60px; }
+.work-form .wf-unit { flex: 0.8; min-width: 60px; }
+.work-form .wf-btn {
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 12px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.work-form .wf-btn:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 6px 16px rgba(52, 152, 219, 0.3);
+}
+.work-form .wf-btn.complete { background: #27ae60; }
+.work-form .wf-btn.complete:hover {
+    background: #1e8449;
+    box-shadow: 0 6px 16px rgba(39, 174, 96, 0.3);
+}
+.work-item .progress-bar {
+    display: inline-block;
+    background: #e9ecef;
+    border-radius: 10px;
+    height: 8px;
+    width: 100px;
+    overflow: hidden;
+    margin: 0 4px;
+}
+.work-item .progress-bar .fill {
+    height: 100%;
+    background: #2ecc71;
+    transition: width 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ========== КНОПКИ ДОБАВЛЕНИЯ ========== */
+.add-btn {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 16px;
+    margin-top: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.add-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(52, 152, 219, 0.4);
+}
+.save-btn {
+    background: linear-gradient(135deg, #27ae60, #1e8449);
+    color: white;
+    border: none;
+    border-radius: 30px;
+    padding: 12px;
+    margin-top: 16px;
+    cursor: pointer;
+    font-weight: 700;
+    width: 100%;
+    font-size: 18px;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.save-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(39, 174, 96, 0.5);
+}
+
+/* ========== СВОДКА ========== */
+#infoSection {
+    padding: 20px;
+    background: #f8f9fa;
+    flex-shrink: 0;
+}
+#infoSection h2 {
+    color: #2c3e50;
+    margin-bottom: 16px;
+    border-bottom: 3px solid #3498db;
+    padding-bottom: 8px;
+}
+#chartContainer {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    height: 350px;
+    margin-bottom: 30px;
+}
+#chartContainer canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* ========== ТАБЛИЦА ========== */
+#tableContainer {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    overflow-x: auto;
+}
+#tableContainer h3 {
+    color: #2c3e50;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+#housesTable {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px #e9ecef;
+    table-layout: fixed;
+}
+#housesTable thead {
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    color: white;
+}
+#housesTable th {
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+#housesTable th:not(:last-child) { border-right: 1px solid rgba(255, 255, 255, 0.1); }
+#housesTable td {
+    padding: 8px 10px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f3f5;
+    word-wrap: break-word;
+    white-space: normal;
+    overflow-wrap: break-word;
+    max-width: 300px;
+}
+#housesTable tbody tr {
+    background: white;
+    transition: background 0.4s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+#housesTable tbody tr:nth-child(even) { background: #f8f9fa; }
+#housesTable tbody tr:hover {
+    background: #e9ecef;
+    transform: scale(1.01);
+}
+#housesTable .house-name { font-weight: 600; color: #2c3e50; }
+#housesTable .house-id { font-weight: 700; color: #3498db; }
+
+/* Ширина колонок таблицы */
+#housesTable th:nth-child(1) { width: 6%; }
+#housesTable th:nth-child(2) { width: 12%; }
+#housesTable th:nth-child(3) { width: 8%; }
+#housesTable th:nth-child(4) { width: 8%; }
+#housesTable th:nth-child(5) { width: 6%; }
+#housesTable th:nth-child(6) { width: 7%; }
+#housesTable th:nth-child(7) { width: 5%; }
+#housesTable th:nth-child(8) { width: 14%; }
+#housesTable th:nth-child(9) { width: 10%; }
+#housesTable th:nth-child(10) { width: 20%; }
+#housesTable th:nth-child(11) { width: 20%; }
+
+/* ========== БЕЙДЖИ СТАТУСОВ ========== */
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    letter-spacing: 0.2px;
+}
+.status-not_started { background: #fee2e2; color: #dc2626; }
+.status-in_progress { background: #fef3c7; color: #d97706; }
+.status-completed { background: #dcfce7; color: #16a34a; }
+.status-unknown { background: #e5e7eb; color: #6b7280; }
+
+.exec-status {
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+.exec-on-time { background: #dcfce7; color: #16a34a; }
+.exec-behind { background: #fee2e2; color: #dc2626; }
+.exec-ahead { background: #dbeafe; color: #2563eb; }
+.exec-in-progress { background: #fef3c7; color: #d97706; }
+.exec-overdue { background: #fecaca; color: #b91c1c; }
+.exec-unknown { background: #e5e7eb; color: #6b7280; }
+
+/* ========== ЧИПСЫ ========== */
+.material-chip,
+.shift-chip {
+    display: inline-block;
+    border-radius: 16px;
+    padding: 2px 8px;
+    font-size: 11px;
+    margin: 1px 3px 1px 0;
+    white-space: normal;
+    word-break: break-word;
+    animation: fadeInScale 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.material-chip:hover,
+.shift-chip:hover {
+    transform: scale(1.05) translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.material-chip { background: #f1f3f5; border: 1px solid #e9ecef; }
+.shift-chip { background: #f3e8ff; border: 1px solid #d8b4fe; }
+.stage-item { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; }
+.date-chip { font-size: 12px; color: #555; white-space: nowrap; }
+
+/* ========== АДАПТИВНОСТЬ ========== */
+@media (max-width: 768px) {
+    #panel { width: 90%; right: 5%; top: 10px; max-height: calc(100% - 20px); padding: 12px; }
+    #header { font-size: 18px; padding: 8px 12px; }
+    #scene { height: 400px; }
+    #chartContainer { height: 250px; }
+    .house-marker { width: 36px; height: 36px; font-size: 11px; transition: width 0.5s ease, height 0.5s ease, font-size 0.5s ease; }
+    #housesTable { table-layout: auto; font-size: 12px; }
+    #housesTable th, #housesTable td { white-space: normal; word-wrap: break-word; max-width: 150px; }
+    .shift-form, .work-form { flex-direction: column; }
+    .shift-form input, .shift-form select, .shift-form .sf-btn,
+    .work-form input, .work-form select, .work-form .wf-btn { width: 100%; }
+}
