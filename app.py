@@ -12,14 +12,14 @@ EXCEL_FILE = 'data.xlsx'
 
 if not os.path.exists(DATA_FILE):
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
-        json.dump({"frozen": False}, f)
+        json.dump({"frozen": False, "mapBackground": "", "housesPositions": [], "roadPoints": []}, f)
 
 def load_data():
     try:
         with open(DATA_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     except:
-        return {"frozen": False}
+        return {"frozen": False, "mapBackground": "", "housesPositions": [], "roadPoints": []}
 
 def save_data(data):
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
@@ -118,7 +118,8 @@ def generate_excel(data):
             cell.border = border_style
 
         row_num = 2
-        house_ids = [k for k in sorted(data.keys(), key=lambda x: int(x) if x.isdigit() else 0) if k != 'frozen']
+        house_ids = [k for k in sorted(data.keys(), key=lambda x: int(x) if x.isdigit() else 0) 
+                    if k not in ['frozen', 'mapBackground', 'housesPositions', 'roadPoints']]
 
         for house_id in house_ids:
             house = data[house_id]
@@ -281,10 +282,10 @@ def api_road():
 def api_background():
     if request.method == 'GET':
         data = load_data()
-        return jsonify({'background': data.get('background', '')})
+        return jsonify({'background': data.get('mapBackground', '')})
     else:
         data = load_data()
-        data['background'] = request.json.get('background', '')
+        data['mapBackground'] = request.json.get('background', '')
         save_data(data)
         return jsonify({'status': 'ok'})
 
