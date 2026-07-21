@@ -264,6 +264,27 @@ def download_excel():
     else:
         return "Файл ещё не создан", 404
 
+@app.route('/api/houses', methods=['GET', 'POST'])
+def api_houses():
+    if request.method == 'GET':
+        data = load_data()
+        return jsonify(data.get('housesPositions', []))
+    else:
+        data = load_data()
+        data['housesPositions'] = request.json
+        save_data(data)
+        return jsonify({'status': 'ok'})
+
+@app.route('/api/road', methods=['GET', 'POST'])
+def api_road():
+    if request.method == 'GET':
+        data = load_data()
+        return jsonify(data.get('roadPoints', []))
+    else:
+        data = load_data()
+        data['roadPoints'] = request.json
+        save_data(data)
+        return jsonify({'status': 'ok'})
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
