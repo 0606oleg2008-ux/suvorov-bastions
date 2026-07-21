@@ -8,7 +8,7 @@ const CONFIG = {
 // ================================================================
 
 // --------------------------------------------------------------
-// 1. ЗАГРУЗКА ФОТО (локальное хранилище, не синхронизируется)
+// 1. ЗАГРУЗКА ФОТО (локально, не синхронизируется)
 // --------------------------------------------------------------
 const MAP_BG_KEY = 'mapBackgroundImage';
 const uploadBtn = document.getElementById('uploadBtn');
@@ -44,11 +44,7 @@ fileInput.addEventListener('change', function(e) {
 // --------------------------------------------------------------
 // 2. ДОМА (СИНХРОНИЗАЦИЯ С СЕРВЕРОМ)
 // --------------------------------------------------------------
-const HOUSE_POS_KEY = 'housesPositionsV2';
-const HOUSE_ANGLE_KEY = 'housesAnglesV2';
-const ROAD_POINTS_KEY = 'roadPointsV2';
 let isFrozen = false;
-
 let houses = [];
 let houseElements = [];
 let isDragging = false;
@@ -71,20 +67,21 @@ function generateDefaultPositions() {
     return positions;
 }
 
-// Загрузка позиций с сервера
+// Принудительная загрузка с сервера
 async function loadHousePositionsFromServer() {
     try {
         const resp = await fetch('/api/houses');
         if (!resp.ok) throw new Error('Server error');
         const positions = await resp.json();
         if (positions && positions.length === CONFIG.numHouses) {
+            localStorage.setItem('housesPositions', JSON.stringify(positions));
             return positions;
         }
     } catch(e) {
         console.warn('Ошибка загрузки позиций с сервера, используем localStorage');
     }
-    // Fallback: localStorage
-    let positions = localStorage.getItem(HOUSE_POS_KEY);
+    // Fallback localStorage
+    let positions = localStorage.getItem('housesPositions');
     if (positions) {
         try {
             positions = JSON.parse(positions);
@@ -93,14 +90,12 @@ async function loadHousePositionsFromServer() {
             }
         } catch(e) {}
     }
-    // Генерация по умолчанию
+    // Если ничего нет – генерируем и сохраняем на сервер
     const defaultPos = generateDefaultPositions();
-    // Сохраняем на сервер
     await saveHousePositionsToServer(defaultPos);
     return defaultPos;
 }
 
-// Сохранение позиций на сервер
 async function saveHousePositionsToServer(positions) {
     try {
         await fetch('/api/houses', {
@@ -108,13 +103,12 @@ async function saveHousePositionsToServer(positions) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(positions)
         });
-        localStorage.setItem(HOUSE_POS_KEY, JSON.stringify(positions));
+        localStorage.setItem('housesPositions', JSON.stringify(positions));
     } catch(e) {
         console.warn('Ошибка сохранения позиций на сервер');
     }
 }
 
-// Функция для сохранения текущих позиций
 async function syncHousePositions() {
     const positions = houses.map(h => ({ id: h.id, x: h.x, y: h.y, angle: h.angle || 0 }));
     await saveHousePositionsToServer(positions);
@@ -133,6 +127,7 @@ function createHouseElement(house, delay, withEvents = true) {
     div.innerHTML = `<span class="marker-label">#${house.id}</span>`;
     
     if (withEvents && !isFrozen) {
+        // Перетаскивание
         div.addEventListener('mousedown', function(e) {
             if (e.button !== 0) return;
             isDragging = true;
@@ -144,6 +139,7 @@ function createHouseElement(house, delay, withEvents = true) {
             this.classList.add('dragging');
             e.preventDefault();
         });
+        // Вращение колёсиком
         div.addEventListener('wheel', function(e) {
             e.preventDefault();
             e.stopPropagation();
@@ -198,6 +194,7 @@ async function initHouses() {
     updateHouseColors();
 }
 
+// Инициализация при загрузке
 initHouses();
 
 document.addEventListener('mousemove', function(e) {
@@ -236,7 +233,6 @@ const drawRoadBtn = document.getElementById('drawRoadBtn');
 const clearRoadBtn = document.getElementById('clearRoadBtn');
 const drawingHint = document.getElementById('drawingHint');
 
-// Загрузка дороги с сервера
 async function loadRoadFromServer() {
     try {
         const resp = await fetch('/api/road');
@@ -244,6 +240,7 @@ async function loadRoadFromServer() {
         const points = await resp.json();
         if (points && points.length >= 2) {
             roadPoints = points;
+            localStorage.setItem('roadPoints', JSON.stringify(points));
             drawRoadPath();
             return true;
         }
@@ -251,7 +248,7 @@ async function loadRoadFromServer() {
         console.warn('Ошибка загрузки дороги с сервера');
     }
     // Fallback localStorage
-    const saved = localStorage.getItem(ROAD_POINTS_KEY);
+    const saved = localStorage.getItem('roadPoints');
     if (saved) {
         try {
             const points = JSON.parse(saved);
@@ -265,7 +262,6 @@ async function loadRoadFromServer() {
     return false;
 }
 
-// Сохранение дороги на сервер
 async function saveRoadToServer(points) {
     try {
         await fetch('/api/road', {
@@ -273,7 +269,7 @@ async function saveRoadToServer(points) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(points)
         });
-        localStorage.setItem(ROAD_POINTS_KEY, JSON.stringify(points));
+        localStorage.setItem('roadPoints', JSON.stringify(points));
     } catch(e) {
         console.warn('Ошибка сохранения дороги на сервер');
     }
@@ -308,7 +304,7 @@ function onSceneClick(e) {
     const y = e.clientY - rect.top;
     roadPoints.push({ x, y });
     drawRoadPath();
-    localStorage.setItem(ROAD_POINTS_KEY, JSON.stringify(roadPoints));
+    localStorage.setItem('roadPoints', JSON.stringify(roadPoints));
     if (roadPoints.length === 1) {
         drawingHint.textContent = 'Кликните для добавления точек. Двойной клик — завершить.';
     }
@@ -321,7 +317,7 @@ function onSceneDblClick(e) {
     drawRoadBtn.textContent = '🛣️ Перерисовать дорогу';
     if (roadPoints.length < 2) {
         if (roadPath) { roadPath.remove(); roadPath = null; }
-        localStorage.removeItem(ROAD_POINTS_KEY);
+        localStorage.removeItem('roadPoints');
         roadPoints = [];
     } else {
         saveRoadToServer(roadPoints);
@@ -332,7 +328,7 @@ function onSceneDblClick(e) {
 
 drawRoadBtn.addEventListener('click', function() {
     if (isFrozen) return;
-    if (roadPath) { roadPath.remove(); roadPath = null; localStorage.removeItem(ROAD_POINTS_KEY); roadPoints = []; }
+    if (roadPath) { roadPath.remove(); roadPath = null; localStorage.removeItem('roadPoints'); roadPoints = []; }
     isDrawingRoad = true;
     roadPoints = [];
     drawingHint.style.display = 'block';
@@ -346,7 +342,7 @@ clearRoadBtn.addEventListener('click', function() {
     if (isFrozen) return;
     if (roadPath) { roadPath.remove(); roadPath = null; }
     roadPoints = [];
-    localStorage.removeItem(ROAD_POINTS_KEY);
+    localStorage.removeItem('roadPoints');
     saveRoadToServer([]);
     drawRoadBtn.textContent = '🛣️ Рисовать дорогу';
     drawingHint.style.display = 'none';
@@ -356,7 +352,9 @@ clearRoadBtn.addEventListener('click', function() {
 });
 
 // Загружаем дорогу при старте
-loadRoadFromServer();
+(async function initRoad() {
+    await loadRoadFromServer();
+})();
 
 document.getElementById('resetHousesBtn').addEventListener('click', async function() {
     if (isFrozen) return;
@@ -1320,7 +1318,7 @@ document.getElementById('freezeBtn').addEventListener('click', async function() 
 });
 
 // --------------------------------------------------------------
-// 10. ИНИЦИАЛИЗАЦИЯ
+// 10. ИНИЦИАЛИЗАЦИЯ (главная)
 // --------------------------------------------------------------
 (async function init() {
     await checkFreezeStatus();
