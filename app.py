@@ -255,16 +255,6 @@ def set_freeze():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/excel')
-def download_excel():
-    data = load_data()
-    generate_excel(data)
-    if os.path.exists(EXCEL_FILE):
-        return send_file(EXCEL_FILE, as_attachment=True, download_name='Строительство_Суворовские_бастионы.xlsx')
-    else:
-        return "Файл ещё не создан", 404
-
-# ---- МАРШРУТЫ ДЛЯ СИНХРОНИЗАЦИИ ДОМОВ И ДОРОГИ ----
 @app.route('/api/houses', methods=['GET', 'POST'])
 def api_houses():
     if request.method == 'GET':
@@ -286,6 +276,26 @@ def api_road():
         data['roadPoints'] = request.json
         save_data(data)
         return jsonify({'status': 'ok'})
+
+@app.route('/api/background', methods=['GET', 'POST'])
+def api_background():
+    if request.method == 'GET':
+        data = load_data()
+        return jsonify({'background': data.get('background', '')})
+    else:
+        data = load_data()
+        data['background'] = request.json.get('background', '')
+        save_data(data)
+        return jsonify({'status': 'ok'})
+
+@app.route('/api/excel')
+def download_excel():
+    data = load_data()
+    generate_excel(data)
+    if os.path.exists(EXCEL_FILE):
+        return send_file(EXCEL_FILE, as_attachment=True, download_name='Строительство_Суворовские_бастионы.xlsx')
+    else:
+        return "Файл ещё не создан", 404
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
