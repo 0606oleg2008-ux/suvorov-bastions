@@ -12,14 +12,14 @@ EXCEL_FILE = 'data.xlsx'
 
 if not os.path.exists(DATA_FILE):
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
-        json.dump({}, f)
+        json.dump({"frozen": False}, f)
 
 def load_data():
     try:
         with open(DATA_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     except:
-        return {}
+        return {"frozen": False}
 
 def save_data(data):
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
@@ -105,7 +105,6 @@ def generate_excel(data):
         even_row_fill = PatternFill(start_color="F8F9FA", end_color="F8F9FA", fill_type="solid")
         odd_row_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
 
-        # Заголовки
         headers = ['Дом', 'Название дома', 'План начала дома', 'План окончания дома',
                    'Факт начала дома', 'Факт окончания дома', 'Всего смен', 'Всего человек',
                    'Этап', 'Статус этапа', 'План начала этапа', 'План окончания этапа',
@@ -119,13 +118,12 @@ def generate_excel(data):
             cell.border = border_style
 
         row_num = 2
-        house_ids = sorted(data.keys(), key=lambda x: int(x) if x.isdigit() else 0)
+        house_ids = [k for k in sorted(data.keys(), key=lambda x: int(x) if x.isdigit() else 0) if k != 'frozen']
 
         for house_id in house_ids:
             house = data[house_id]
             floors = house.get('floors', [])
 
-            # --- Строка ДОМА (уровень 0) ---
             total_shifts = 0
             total_workers = 0
             for f in floors:
@@ -143,7 +141,6 @@ def generate_excel(data):
             ws.cell(row=row_num, column=6, value=house.get('fact_end', ''))
             ws.cell(row=row_num, column=7, value=total_shifts).alignment = number_alignment
             ws.cell(row=row_num, column=8, value=total_workers).alignment = number_alignment
-            # Остальные колонки пустые
             for col in [9,10,11,12,13,14,15,16,17,18]:
                 ws.cell(row=row_num, column=col).value = ''
             for col in range(1, len(headers)+1):
@@ -155,7 +152,6 @@ def generate_excel(data):
             ws.row_dimensions[row_num].outline_level = 0
             row_num += 1
 
-            # --- Строки ЭТАПОВ (уровень 1) ---
             for floor in floors:
                 shifts = floor.get('shifts', [])
                 total_shifts_floor = len(shifts)
@@ -169,7 +165,6 @@ def generate_excel(data):
 
                 ws.cell(row=row_num, column=1, value=f"#{house_id}").font = Font(bold=False, size=10)
                 ws.cell(row=row_num, column=2, value=house.get('name', '')).font = Font(bold=False)
-                # Даты дома не заполняем
                 ws.cell(row=row_num, column=7, value=total_shifts_floor).alignment = number_alignment
                 ws.cell(row=row_num, column=8, value=total_workers_floor).alignment = number_alignment
                 ws.cell(row=row_num, column=9, value=floor.get('name', '')).font = Font(bold=True)
@@ -182,7 +177,6 @@ def generate_excel(data):
                 ws.cell(row=row_num, column=14, value=floor.get('fact_end', ''))
                 exec_status = get_execution_status(floor)
                 ws.cell(row=row_num, column=15, value=exec_status)
-                # Колонки смен пустые
                 for col in [16,17,18]:
                     ws.cell(row=row_num, column=col).value = ''
 
@@ -196,12 +190,10 @@ def generate_excel(data):
                 ws.row_dimensions[row_num].outline_level = 1
                 row_num += 1
 
-                # --- Строки СМЕН (уровень 2) ---
                 for shift in shifts:
                     fill = even_row_fill if row_num % 2 == 0 else odd_row_fill
                     ws.cell(row=row_num, column=1, value=f"#{house_id}").font = Font(bold=False, size=9)
                     ws.cell(row=row_num, column=2, value=house.get('name', '')).font = Font(bold=False)
-                    # Остальные колонки пустые до "Смена"
                     ws.cell(row=row_num, column=16, value=shift.get('name', ''))
                     ws.cell(row=row_num, column=17, value=shift.get('date', ''))
                     ws.cell(row=row_num, column=18, value=shift.get('workers', 0)).alignment = number_alignment
@@ -215,7 +207,6 @@ def generate_excel(data):
                     ws.row_dimensions[row_num].outline_level = 2
                     row_num += 1
 
-        # Ширина колонок
         col_widths = {
             1: 10, 2: 25, 3: 16, 4: 16, 5: 16, 6: 16,
             7: 12, 8: 14, 9: 25, 10: 18, 11: 16, 12: 16,
@@ -229,14 +220,12 @@ def generate_excel(data):
         if row_num > 1:
             ws.auto_filter.ref = ws.dimensions
 
-        try:
-            wb.save(EXCEL_FILE)
-            print(f"✅ Excel обновлён с детализацией смен: {EXCEL_FILE}")
-        except PermissionError:
-            print(f"⚠️ Не удалось сохранить {EXCEL_FILE} — файл открыт в Excel. Закройте его.")
-
+        wb.save(EXCEL_FILE)
+        print(f"✅ Excel обновлён: {EXCEL_FILE}")
+        return True
     except Exception as e:
         print(f"❌ Ошибка генерации Excel: {e}")
+        return False
 
 # ------------------ Маршруты ------------------
 @app.route('/')
@@ -252,7 +241,16 @@ def post_data():
     try:
         new_data = request.json
         save_data(new_data)
-        generate_excel(new_data)
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/freeze', methods=['POST'])
+def set_freeze():
+    try:
+        data = load_data()
+        data['frozen'] = True
+        save_data(data)
         return jsonify({'status': 'ok'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -267,4 +265,5 @@ def download_excel():
         return "Файл ещё не создан", 404
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)
