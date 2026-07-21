@@ -8,7 +8,7 @@ const CONFIG = {
 // ================================================================
 
 // --------------------------------------------------------------
-// 1. ЗАГРУЗКА ФОТО
+// 1. ЗАГРУЗКА ФОТО (локальное хранилище, не синхронизируется)
 // --------------------------------------------------------------
 const MAP_BG_KEY = 'mapBackgroundImage';
 const uploadBtn = document.getElementById('uploadBtn');
@@ -42,7 +42,7 @@ fileInput.addEventListener('change', function(e) {
 });
 
 // --------------------------------------------------------------
-// 2. ДОМА (перетаскивание, поворот)
+// 2. ДОМА (СИНХРОНИЗАЦИЯ С СЕРВЕРОМ)
 // --------------------------------------------------------------
 const HOUSE_POS_KEY = 'housesPositionsV2';
 const HOUSE_ANGLE_KEY = 'housesAnglesV2';
@@ -66,45 +66,58 @@ function generateDefaultPositions() {
     for (let i = 0; i < CONFIG.numHouses; i++) {
         const col = i % cols;
         const row = Math.floor(i / cols);
-        positions.push({ id: i + 1, x: startX + col * spacingX, y: startY + row * spacingY });
+        positions.push({ id: i + 1, x: startX + col * spacingX, y: startY + row * spacingY, angle: 0 });
     }
     return positions;
 }
 
-function loadHousePositions() {
+// Загрузка позиций с сервера
+async function loadHousePositionsFromServer() {
+    try {
+        const resp = await fetch('/api/houses');
+        if (!resp.ok) throw new Error('Server error');
+        const positions = await resp.json();
+        if (positions && positions.length === CONFIG.numHouses) {
+            return positions;
+        }
+    } catch(e) {
+        console.warn('Ошибка загрузки позиций с сервера, используем localStorage');
+    }
+    // Fallback: localStorage
     let positions = localStorage.getItem(HOUSE_POS_KEY);
     if (positions) {
         try {
             positions = JSON.parse(positions);
-            if (positions.length === CONFIG.numHouses) return positions;
+            if (positions.length === CONFIG.numHouses) {
+                return positions;
+            }
         } catch(e) {}
     }
-    positions = generateDefaultPositions();
-    localStorage.setItem(HOUSE_POS_KEY, JSON.stringify(positions));
-    return positions;
+    // Генерация по умолчанию
+    const defaultPos = generateDefaultPositions();
+    // Сохраняем на сервер
+    await saveHousePositionsToServer(defaultPos);
+    return defaultPos;
 }
 
-function loadHouseAngles() {
-    let angles = localStorage.getItem(HOUSE_ANGLE_KEY);
-    if (angles) {
-        try {
-            angles = JSON.parse(angles);
-            if (angles.length === CONFIG.numHouses) return angles;
-        } catch(e) {}
+// Сохранение позиций на сервер
+async function saveHousePositionsToServer(positions) {
+    try {
+        await fetch('/api/houses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(positions)
+        });
+        localStorage.setItem(HOUSE_POS_KEY, JSON.stringify(positions));
+    } catch(e) {
+        console.warn('Ошибка сохранения позиций на сервер');
     }
-    angles = Array(CONFIG.numHouses).fill(0);
-    localStorage.setItem(HOUSE_ANGLE_KEY, JSON.stringify(angles));
-    return angles;
 }
 
-function saveHousePositions() {
-    const positions = houses.map(h => ({ id: h.id, x: h.x, y: h.y }));
-    localStorage.setItem(HOUSE_POS_KEY, JSON.stringify(positions));
-}
-
-function saveHouseAngles() {
-    const angles = houses.map(h => h.angle || 0);
-    localStorage.setItem(HOUSE_ANGLE_KEY, JSON.stringify(angles));
+// Функция для сохранения текущих позиций
+async function syncHousePositions() {
+    const positions = houses.map(h => ({ id: h.id, x: h.x, y: h.y, angle: h.angle || 0 }));
+    await saveHousePositionsToServer(positions);
 }
 
 function createHouseElement(house, delay, withEvents = true) {
@@ -120,7 +133,6 @@ function createHouseElement(house, delay, withEvents = true) {
     div.innerHTML = `<span class="marker-label">#${house.id}</span>`;
     
     if (withEvents && !isFrozen) {
-        // Перетаскивание
         div.addEventListener('mousedown', function(e) {
             if (e.button !== 0) return;
             isDragging = true;
@@ -132,7 +144,6 @@ function createHouseElement(house, delay, withEvents = true) {
             this.classList.add('dragging');
             e.preventDefault();
         });
-        // Вращение колёсиком (ПЛАВНОЕ И МЕДЛЕННОЕ)
         div.addEventListener('wheel', function(e) {
             e.preventDefault();
             e.stopPropagation();
@@ -142,7 +153,7 @@ function createHouseElement(house, delay, withEvents = true) {
             if (house) {
                 house.angle = (house.angle || 0) + delta;
                 this.style.transform = `rotate(${house.angle}deg) translateY(0) scale(1)`;
-                saveHouseAngles();
+                syncHousePositions();
                 updateChartAndTable();
             }
         }, { passive: false });
@@ -173,10 +184,9 @@ function recreateHousesWithoutEvents() {
     });
 }
 
-function initHouses() {
-    const positions = loadHousePositions();
-    const angles = loadHouseAngles();
-    houses = positions.map((p, idx) => ({ id: p.id, x: p.x, y: p.y, angle: angles[idx] || 0 }));
+async function initHouses() {
+    const positions = await loadHousePositionsFromServer();
+    houses = positions.map(p => ({ id: p.id, x: p.x, y: p.y, angle: p.angle || 0 }));
     const container = document.getElementById('housesContainer');
     container.innerHTML = '';
     houseElements = [];
@@ -208,7 +218,7 @@ document.addEventListener('mouseup', function() {
     if (isFrozen) { isDragging = false; dragTarget = null; return; }
     if (isDragging && dragTarget) {
         dragTarget.classList.remove('dragging');
-        saveHousePositions();
+        syncHousePositions();
         updateChartAndTable();
     }
     isDragging = false;
@@ -216,7 +226,7 @@ document.addEventListener('mouseup', function() {
 });
 
 // --------------------------------------------------------------
-// 3. ДОРОГА
+// 3. ДОРОГА (СИНХРОНИЗАЦИЯ)
 // --------------------------------------------------------------
 let isDrawingRoad = false;
 let roadPoints = [];
@@ -226,7 +236,21 @@ const drawRoadBtn = document.getElementById('drawRoadBtn');
 const clearRoadBtn = document.getElementById('clearRoadBtn');
 const drawingHint = document.getElementById('drawingHint');
 
-function loadRoad() {
+// Загрузка дороги с сервера
+async function loadRoadFromServer() {
+    try {
+        const resp = await fetch('/api/road');
+        if (!resp.ok) throw new Error('Server error');
+        const points = await resp.json();
+        if (points && points.length >= 2) {
+            roadPoints = points;
+            drawRoadPath();
+            return true;
+        }
+    } catch(e) {
+        console.warn('Ошибка загрузки дороги с сервера');
+    }
+    // Fallback localStorage
     const saved = localStorage.getItem(ROAD_POINTS_KEY);
     if (saved) {
         try {
@@ -239,6 +263,20 @@ function loadRoad() {
         } catch(e) {}
     }
     return false;
+}
+
+// Сохранение дороги на сервер
+async function saveRoadToServer(points) {
+    try {
+        await fetch('/api/road', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(points)
+        });
+        localStorage.setItem(ROAD_POINTS_KEY, JSON.stringify(points));
+    } catch(e) {
+        console.warn('Ошибка сохранения дороги на сервер');
+    }
 }
 
 function drawRoadPath() {
@@ -286,7 +324,7 @@ function onSceneDblClick(e) {
         localStorage.removeItem(ROAD_POINTS_KEY);
         roadPoints = [];
     } else {
-        localStorage.setItem(ROAD_POINTS_KEY, JSON.stringify(roadPoints));
+        saveRoadToServer(roadPoints);
     }
     scene.removeEventListener('click', onSceneClick);
     scene.removeEventListener('dblclick', onSceneDblClick);
@@ -309,6 +347,7 @@ clearRoadBtn.addEventListener('click', function() {
     if (roadPath) { roadPath.remove(); roadPath = null; }
     roadPoints = [];
     localStorage.removeItem(ROAD_POINTS_KEY);
+    saveRoadToServer([]);
     drawRoadBtn.textContent = '🛣️ Рисовать дорогу';
     drawingHint.style.display = 'none';
     isDrawingRoad = false;
@@ -316,15 +355,14 @@ clearRoadBtn.addEventListener('click', function() {
     scene.removeEventListener('dblclick', onSceneDblClick);
 });
 
-loadRoad();
+// Загружаем дорогу при старте
+loadRoadFromServer();
 
-document.getElementById('resetHousesBtn').addEventListener('click', function() {
+document.getElementById('resetHousesBtn').addEventListener('click', async function() {
     if (isFrozen) return;
     const positions = generateDefaultPositions();
-    localStorage.setItem(HOUSE_POS_KEY, JSON.stringify(positions));
-    const angles = Array(CONFIG.numHouses).fill(0);
-    localStorage.setItem(HOUSE_ANGLE_KEY, JSON.stringify(angles));
-    houses = positions.map((p, idx) => ({ id: p.id, x: p.x, y: p.y, angle: angles[idx] || 0 }));
+    houses = positions.map(p => ({ id: p.id, x: p.x, y: p.y, angle: p.angle || 0 }));
+    await saveHousePositionsToServer(positions);
     const container = document.getElementById('housesContainer');
     container.innerHTML = '';
     houseElements = [];
@@ -440,7 +478,7 @@ houseFactStart.addEventListener('change', saveHouseFields);
 houseFactEnd.addEventListener('change', saveHouseFields);
 
 // --------------------------------------------------------------
-// 6. РЕНДЕРИНГ ЭТАПОВ (без изменений – большой, но рабочий)
+// 6. РЕНДЕРИНГ ЭТАПОВ (без изменений)
 // --------------------------------------------------------------
 async function renderFloors(houseId) {
     const data = await getHouseData(houseId);
@@ -1242,7 +1280,6 @@ async function updateChartAndTable() {
 // 9. ЗАМОРОЗКА (серверная)
 // --------------------------------------------------------------
 async function applyFreezeUI() {
-    // Скрываем кнопки управления
     document.getElementById('uploadBtn').style.display = 'none';
     document.getElementById('drawRoadBtn').style.display = 'none';
     document.getElementById('clearRoadBtn').style.display = 'none';
@@ -1255,7 +1292,6 @@ async function applyFreezeUI() {
         scene.removeEventListener('click', onSceneClick);
         scene.removeEventListener('dblclick', onSceneDblClick);
     }
-    // Пересоздаём дома БЕЗ обработчиков событий
     recreateHousesWithoutEvents();
 }
 
