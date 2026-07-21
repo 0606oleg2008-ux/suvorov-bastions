@@ -42,19 +42,18 @@ fileInput.addEventListener('change', function(e) {
 });
 
 // --------------------------------------------------------------
-// 2. ДОМА (МЕДЛЕННЫЙ ПЛАВНЫЙ ПОВОРОТ ПРИ НАВЕДЕНИИ)
+// 2. ДОМА (перетаскивание, поворот)
 // --------------------------------------------------------------
 const HOUSE_POS_KEY = 'housesPositionsV2';
 const HOUSE_ANGLE_KEY = 'housesAnglesV2';
 const ROAD_POINTS_KEY = 'roadPointsV2';
-const FROZEN_KEY = 'frozen';
+let isFrozen = false;
 
 let houses = [];
 let houseElements = [];
 let isDragging = false;
 let dragTarget = null;
 let dragOffsetX = 0, dragOffsetY = 0;
-let isFrozen = localStorage.getItem(FROZEN_KEY) === 'true';
 
 function generateDefaultPositions() {
     const positions = [];
@@ -108,7 +107,7 @@ function saveHouseAngles() {
     localStorage.setItem(HOUSE_ANGLE_KEY, JSON.stringify(angles));
 }
 
-function createHouseElement(house, delay) {
+function createHouseElement(house, delay, withEvents = true) {
     const div = document.createElement('div');
     div.className = 'house-marker';
     div.dataset.id = house.id;
@@ -117,10 +116,11 @@ function createHouseElement(house, delay) {
     const angle = house.angle || 0;
     div.style.transform = `rotate(${angle}deg) translateY(30px) scale(0.9)`;
     div.style.opacity = '0';
-    div.style.transition = 'opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1), transform 0.9s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    div.style.transition = 'opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
     div.innerHTML = `<span class="marker-label">#${house.id}</span>`;
     
-    if (!isFrozen) {
+    if (withEvents && !isFrozen) {
+        // Перетаскивание
         div.addEventListener('mousedown', function(e) {
             if (e.button !== 0) return;
             isDragging = true;
@@ -132,6 +132,20 @@ function createHouseElement(house, delay) {
             this.classList.add('dragging');
             e.preventDefault();
         });
+        // Вращение колёсиком (ПЛАВНОЕ И МЕДЛЕННОЕ)
+        div.addEventListener('wheel', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const delta = e.deltaY > 0 ? 5 : -5;
+            const id = parseInt(this.dataset.id);
+            const house = houses.find(h => h.id === id);
+            if (house) {
+                house.angle = (house.angle || 0) + delta;
+                this.style.transform = `rotate(${house.angle}deg) translateY(0) scale(1)`;
+                saveHouseAngles();
+                updateChartAndTable();
+            }
+        }, { passive: false });
     }
     
     div.addEventListener('click', function(e) {
@@ -148,6 +162,17 @@ function createHouseElement(house, delay) {
     return div;
 }
 
+function recreateHousesWithoutEvents() {
+    const container = document.getElementById('housesContainer');
+    container.innerHTML = '';
+    houseElements = [];
+    houses.forEach((house, idx) => {
+        const el = createHouseElement(house, idx * 0.08, false);
+        container.appendChild(el);
+        houseElements.push(el);
+    });
+}
+
 function initHouses() {
     const positions = loadHousePositions();
     const angles = loadHouseAngles();
@@ -156,7 +181,7 @@ function initHouses() {
     container.innerHTML = '';
     houseElements = [];
     houses.forEach((house, idx) => {
-        const el = createHouseElement(house, idx * 0.08);
+        const el = createHouseElement(house, idx * 0.08, !isFrozen);
         container.appendChild(el);
         houseElements.push(el);
     });
@@ -304,7 +329,7 @@ document.getElementById('resetHousesBtn').addEventListener('click', function() {
     container.innerHTML = '';
     houseElements = [];
     houses.forEach((house, idx) => {
-        const el = createHouseElement(house, idx * 0.08);
+        const el = createHouseElement(house, idx * 0.08, !isFrozen);
         container.appendChild(el);
         houseElements.push(el);
     });
@@ -313,7 +338,7 @@ document.getElementById('resetHousesBtn').addEventListener('click', function() {
 });
 
 // --------------------------------------------------------------
-// 4. РАБОТА С ДАННЫМИ
+// 4. РАБОТА С ДАННЫМИ (сервер)
 // --------------------------------------------------------------
 const API_URL = '/api/data';
 
@@ -415,7 +440,7 @@ houseFactStart.addEventListener('change', saveHouseFields);
 houseFactEnd.addEventListener('change', saveHouseFields);
 
 // --------------------------------------------------------------
-// 6. РЕНДЕРИНГ ЭТАПОВ (без изменений)
+// 6. РЕНДЕРИНГ ЭТАПОВ (без изменений – большой, но рабочий)
 // --------------------------------------------------------------
 async function renderFloors(houseId) {
     const data = await getHouseData(houseId);
@@ -959,7 +984,7 @@ function getExecutionClass(status) {
 
 async function updateChartAndTable() {
     const allData = await loadAllData();
-    const houseIds = Object.keys(allData).sort((a,b) => a-b);
+    const houseIds = Object.keys(allData).filter(k => k !== 'frozen').sort((a,b) => a-b);
 
     const labels = houseIds.map(id => {
         const data = allData[id];
@@ -1214,49 +1239,58 @@ async function updateChartAndTable() {
 }
 
 // --------------------------------------------------------------
-// 9. ЗАМОРОЗКА
+// 9. ЗАМОРОЗКА (серверная)
 // --------------------------------------------------------------
-function applyFreeze() {
+async function applyFreezeUI() {
+    // Скрываем кнопки управления
+    document.getElementById('uploadBtn').style.display = 'none';
+    document.getElementById('drawRoadBtn').style.display = 'none';
+    document.getElementById('clearRoadBtn').style.display = 'none';
+    document.getElementById('resetHousesBtn').style.display = 'none';
+    document.getElementById('freezeBtn').style.display = 'none';
+    if (isDrawingRoad) {
+        isDrawingRoad = false;
+        drawingHint.style.display = 'none';
+        drawRoadBtn.textContent = '🛣️ Рисовать дорогу';
+        scene.removeEventListener('click', onSceneClick);
+        scene.removeEventListener('dblclick', onSceneDblClick);
+    }
+    // Пересоздаём дома БЕЗ обработчиков событий
+    recreateHousesWithoutEvents();
+}
+
+async function checkFreezeStatus() {
+    const data = await loadAllData();
+    isFrozen = data.frozen || false;
     if (isFrozen) {
-        document.getElementById('uploadBtn').style.display = 'none';
-        document.getElementById('drawRoadBtn').style.display = 'none';
-        document.getElementById('clearRoadBtn').style.display = 'none';
-        document.getElementById('resetHousesBtn').style.display = 'none';
-        document.getElementById('freezeBtn').style.display = 'none';
-        if (isDrawingRoad) {
-            isDrawingRoad = false;
-            drawingHint.style.display = 'none';
-            drawRoadBtn.textContent = '🛣️ Рисовать дорогу';
-            scene.removeEventListener('click', onSceneClick);
-            scene.removeEventListener('dblclick', onSceneDblClick);
-        }
-        const container = document.getElementById('housesContainer');
-        container.innerHTML = '';
-        houseElements = [];
-        houses.forEach((house, idx) => {
-            const el = createHouseElement(house, idx * 0.08);
-            container.appendChild(el);
-            houseElements.push(el);
-        });
+        await applyFreezeUI();
     }
 }
 
-if (isFrozen) { applyFreeze(); }
-
-document.getElementById('freezeBtn').addEventListener('click', function() {
+document.getElementById('freezeBtn').addEventListener('click', async function() {
     if (isFrozen) return;
-    isFrozen = true;
-    localStorage.setItem(FROZEN_KEY, 'true');
-    applyFreeze();
-    alert('🔒 Положение домов и дороги заморожено!');
+    try {
+        const resp = await fetch('/api/freeze', { method: 'POST' });
+        if (resp.ok) {
+            isFrozen = true;
+            await applyFreezeUI();
+            alert('🔒 Положение домов и дороги заморожено!');
+        } else {
+            alert('Ошибка при заморозке');
+        }
+    } catch (e) {
+        alert('Ошибка соединения с сервером');
+    }
 });
 
 // --------------------------------------------------------------
 // 10. ИНИЦИАЛИЗАЦИЯ
 // --------------------------------------------------------------
 (async function init() {
+    await checkFreezeStatus();
+
     const all = await loadAllData();
-    if (Object.keys(all).length === 0) {
+    if (Object.keys(all).filter(k => k !== 'frozen').length === 0) {
         const testData = {
             1: { name: 'Бастион №1', plan_start: '2025-01-10', plan_end: '2025-03-01', fact_start: '2025-01-12', fact_end: '', floors: [{ name: 'Фундамент', description: 'Заливка бетона', status: 'completed', plan_start: '2025-01-10', plan_end: '2025-02-15', fact_start: '2025-01-12', fact_end: '2025-02-10', shifts: [{ name: 'Дневная', date: '2025-01-12', workers: 5 }, { name: 'Ночная', date: '2025-01-13', workers: 3 }], plannedWorks: [{ id: 1, name: 'Штукатурка', quantity: 1000, unit: 'м²' }], completedWorks: [{ plannedWorkId: 1, name: 'Штукатурка', unit: 'м²', quantity: 200 }] }] },
             2: { name: 'Бастион №2', plan_start: '2025-02-01', plan_end: '2025-04-01', fact_start: '2025-02-05', fact_end: '', floors: [{ name: 'Подвал', description: 'Гидроизоляция', status: 'in_progress', plan_start: '2025-02-20', plan_end: '2025-03-25', fact_start: '2025-02-22', shifts: [{ name: 'Основная', date: '2025-02-22', workers: 4 }], plannedWorks: [{ id: 2, name: 'Битум', quantity: 50, unit: 'кг' }], completedWorks: [{ plannedWorkId: 2, name: 'Битум', unit: 'кг', quantity: 20 }] }] },
@@ -1267,6 +1301,7 @@ document.getElementById('freezeBtn').addEventListener('click', function() {
             7: { name: 'Бастион №7', floors: [] },
             8: { name: 'Бастион №8', floors: [] }
         };
+        testData.frozen = false;
         await saveAllData(testData);
     }
     await updateChartAndTable();
